@@ -28,14 +28,17 @@ public class MigrationRunner {
 
     private DatabaseType databaseType;
 
-    public MigrationRunner(DataSource dataSource, String migrationScriptsLocation, DatabaseType databaseType) {
+    private Boolean showScript;
+
+    public MigrationRunner(DataSource dataSource, String migrationScriptsLocation, DatabaseType databaseType,Boolean showScript,Boolean enable) {
         Assert.notNull(dataSource, "DataSource Must be not null");
         Assert.notNull(dataSource, "migrationScriptsLocation Must be not null");
         Assert.notNull(dataSource, "databaseType Must be not null");
         this.dataSource = dataSource;
         this.migrationScriptsLocation = migrationScriptsLocation;
         this.databaseType = databaseType;
-        this.runMigrations();
+        this.showScript = showScript;
+        if (enable) this.runMigrations();
     }
 
     public void setMigrationScriptsLocation(String migrationScriptsLocation) {
@@ -47,12 +50,14 @@ public class MigrationRunner {
     }
 
     public void runMigrations() {
-
         try (Connection connection = dataSource.getConnection()) {
             List<Migration> migrations = loadMigrations();
             for (Migration migration : migrations) {
+
                 executeMigration(connection, migration);
             }
+
+            System.out.println("=".repeat(100)+"COMPLETE MIGRATIONS BY TAR"+"=".repeat(100));
         } catch (SQLException | IOException e) {
             throw new TarException(e.getMessage());
         }
@@ -66,6 +71,7 @@ public class MigrationRunner {
                 URL resource = resources.nextElement();
                 String[] filenames = readScriptFromFile(resource.openStream()).split("\n");
                 for (var filename : filenames) {
+                    if (showScript) System.out.println("Migration with : "+filename);
                     Enumeration<URL> temp = getClass().getClassLoader().getResources(migrationScriptsLocation+"/"+filename);
                     URL tempResource = temp.nextElement();
                     String script = readScriptFromFile(tempResource.openStream());
@@ -109,12 +115,14 @@ public class MigrationRunner {
         try (Statement statement = connection.createStatement()) {
             if (databaseType != DatabaseType.MYSQL) {
                 statement.execute(migration.getScript());
+                if (showScript)
                 System.out.println("Executed migration: " + migration.getVersion() + " - " + migration.getDescription());
             } else {
                 String[] statements = migration.getScript().split(";");
                 for (String sql : statements) {
                     if (!sql.trim().isEmpty()) {
                         statement.execute(sql);
+                        if (showScript)
                         System.out.println("Executed MYSQL statement: " + sql.trim());
                     }
                 }
