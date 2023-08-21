@@ -71,13 +71,15 @@ public class MigrationRunner {
                 URL resource = resources.nextElement();
                 String[] filenames = readScriptFromFile(resource.openStream()).split("\n");
                 for (var filename : filenames) {
-                    if (showScript) System.out.println("Migration with : "+filename);
-                    Enumeration<URL> temp = getClass().getClassLoader().getResources(migrationScriptsLocation+"/"+filename);
-                    URL tempResource = temp.nextElement();
-                    String script = readScriptFromFile(tempResource.openStream());
-                    Migration migration = parseMigrationFileName(filename);
-                    migration.setScript(script);
-                    migrations.add(migration);
+                    if (filename.endsWith(".sql")) {
+                        if (showScript) System.out.println("Migration with : " + filename);
+                        Enumeration<URL> temp = getClass().getClassLoader().getResources(migrationScriptsLocation + "/" + filename);
+                        URL tempResource = temp.nextElement();
+                        String script = readScriptFromFile(tempResource.openStream());
+                        Migration migration = parseMigrationFileName(filename);
+                        migration.setScript(script);
+                        migrations.add(migration);
+                    }
                 }
             }
         } finally {
