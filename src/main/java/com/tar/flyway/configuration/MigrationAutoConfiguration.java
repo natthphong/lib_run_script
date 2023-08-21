@@ -2,7 +2,6 @@ package com.tar.flyway.configuration;
 
 import com.tar.flyway.MigrationRunner;
 import com.tar.flyway.model.DatabaseType;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
