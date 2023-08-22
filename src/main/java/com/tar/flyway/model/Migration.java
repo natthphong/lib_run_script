@@ -16,6 +16,10 @@ public class Migration {
         return version;
     }
 
+    public Integer getVersionInt(){
+        return Integer.parseInt(version);
+    }
+
     public void setVersion(String version) {
         this.version = version;
     }

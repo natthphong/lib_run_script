@@ -15,9 +15,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,7 +30,15 @@ public class MigrationRunner {
 
     private Boolean showScript;
 
-    public MigrationRunner(DataSource dataSource, String migrationScriptsLocation, DatabaseType databaseType,Boolean showScript,Boolean enable) {
+    private Integer start;
+
+    private Integer stop;
+    private List<Integer> ignoreVersion ;
+
+    public MigrationRunner(DataSource dataSource, String migrationScriptsLocation,
+                           DatabaseType databaseType, Boolean showScript,
+                           Boolean enable, Integer start , Integer stop,
+                           List<Integer> ignoreVersion) {
         Assert.notNull(dataSource, "DataSource Must be not null");
         Assert.notNull(dataSource, "migrationScriptsLocation Must be not null");
         Assert.notNull(dataSource, "databaseType Must be not null");
@@ -38,8 +46,12 @@ public class MigrationRunner {
         this.migrationScriptsLocation = migrationScriptsLocation;
         this.databaseType = databaseType;
         this.showScript = showScript;
+        this.start = start;
+        this.stop = stop;
+        this.ignoreVersion= ignoreVersion;
         if (enable) this.runMigrations();
     }
+
 
     public void setMigrationScriptsLocation(String migrationScriptsLocation) {
         this.migrationScriptsLocation = migrationScriptsLocation;
@@ -52,12 +64,12 @@ public class MigrationRunner {
     public void runMigrations() {
         try (Connection connection = dataSource.getConnection()) {
             List<Migration> migrations = loadMigrations();
+            migrations = migrations.stream().sorted(Comparator.comparing(Migration::getVersionInt)).toList();
+            stop=stop==-1?migrations.size():stop;
             for (Migration migration : migrations) {
-
-                executeMigration(connection, migration);
+                if (start <= migration.getVersionInt() && migration.getVersionInt()<=stop && !ignoreVersion.contains(migration.getVersionInt())) executeMigration(connection, migration);
             }
-
-            System.out.println("=".repeat(100)+"COMPLETE MIGRATIONS BY TAR"+"=".repeat(100));
+            if (stop>0) System.out.println("=".repeat(100) + "COMPLETE MIGRATIONS BY TAR" + "=".repeat(100));
         } catch (SQLException | IOException e) {
             throw new TarException(e.getMessage());
         }
@@ -72,7 +84,6 @@ public class MigrationRunner {
                 String[] filenames = readScriptFromFile(resource.openStream()).split("\n");
                 for (var filename : filenames) {
                     if (filename.endsWith(".sql")) {
-                        if (showScript) System.out.println("Migration with : " + filename);
                         Enumeration<URL> temp = getClass().getClassLoader().getResources(migrationScriptsLocation + "/" + filename);
                         URL tempResource = temp.nextElement();
                         String script = readScriptFromFile(tempResource.openStream());
@@ -102,7 +113,7 @@ public class MigrationRunner {
             String description = matcher.group(2).replace("_", " ");
             return new Migration(version, description, null);
         }
-        return new Migration(filename,filename,null);
+        return new Migration(filename, filename, null);
     }
 
 
@@ -114,18 +125,19 @@ public class MigrationRunner {
 
 
     private void executeMigration(Connection connection, Migration migration) throws SQLException {
+        if (showScript) System.out.println("Migration with : V" + migration.getVersion() + "_" + migration.getDescription());
         try (Statement statement = connection.createStatement()) {
             if (databaseType != DatabaseType.MYSQL) {
                 statement.execute(migration.getScript());
                 if (showScript)
-                System.out.println("Executed migration: " + migration.getVersion() + " - " + migration.getDescription());
+                    System.out.println("Executed migration: " + migration.getScript());
             } else {
                 String[] statements = migration.getScript().split(";");
                 for (String sql : statements) {
                     if (!sql.trim().isEmpty()) {
                         statement.execute(sql);
                         if (showScript)
-                        System.out.println("Executed MYSQL statement: " + sql.trim());
+                            System.out.println("Executed MYSQL statement: " + sql.trim());
                     }
                 }
             }
