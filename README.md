@@ -1,5 +1,19 @@
 #  version 0.0.2
 
+# setup
+```xml
+<!-- https://mvnrepository.com/artifact/io.github.natthphong/tarway -->
+<dependency>
+    <groupId>io.github.natthphong</groupId>
+    <artifactId>tarway</artifactId>
+    <version>0.0.2</version>
+</dependency>
+```
+```groovy
+// https://mvnrepository.com/artifact/io.github.natthphong/tarway
+implementation group: 'io.github.natthphong', name: 'tarway', version: '0.0.2'
+```
+
 ## Value can be customized in 
 ```yaml
 tar:
